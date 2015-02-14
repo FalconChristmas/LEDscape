@@ -374,14 +374,16 @@ ledscape_wait(
 }
 
 
-static ledscape_t *
+ledscape_t *
 ledscape_matrix_init(
 	ledscape_config_t * const config_union,
-	int no_pru_init
+	int no_pru_init,
+	int pru_number,
+	const char * pru_program
 )
 {
 	ledscape_matrix_config_t * const config = &config_union->matrix_config;
-	pru_t * const pru = pru_init(0);
+	pru_t * const pru = pru_init(pru_number);
 	const size_t frame_size = config->panel_width * config->panel_height * 3 * LEDSCAPE_MATRIX_OUTPUTS * LEDSCAPE_MATRIX_PANELS;
 
 	ledscape_t * const leds = calloc(1, sizeof(*leds));
@@ -406,7 +408,7 @@ ledscape_matrix_init(
 
 	// Initiate the PRU program
 	if (!no_pru_init)
-		pru_exec(pru, "./lib/matrix.bin");
+		pru_exec(pru, pru_program);
 
 	// Watch for a done response that indicates a proper startup
 	// \todo timeout if it fails
@@ -419,14 +421,16 @@ ledscape_matrix_init(
 }
 
 
-static ledscape_t *
+ledscape_t *
 ledscape_strip_init(
 	ledscape_config_t * const config_union,
-	int no_pru_init
+	int no_pru_init,
+	int pru_number,
+	const char * pru_program
 )
 {
 	ledscape_strip_config_t * const config = &config_union->strip_config;
-	pru_t * const pru = pru_init(0);
+	pru_t * const pru = pru_init(pru_number);
 	const size_t frame_size = 48 * config->leds_width * 8 * 3;
 
 	printf("frame-size %zu, ddr-size=%zu\n", frame_size, pru->ddr_size);
@@ -463,7 +467,7 @@ ledscape_strip_init(
 
 	// Initiate the PRU program
 	if (!no_pru_init)
-		pru_exec(pru, "./lib/ws281x.bin");
+		pru_exec(pru, pru_program);
 
 	// Watch for a done response that indicates a proper startup
 	// \todo timeout if it fails
@@ -485,9 +489,9 @@ ledscape_init(
 	switch (config->type)
 	{
 		case LEDSCAPE_MATRIX:
-			return ledscape_matrix_init(config, no_pru_init);
+			return ledscape_matrix_init(config, no_pru_init, 0, "./lib/matrix.bin");
 		case LEDSCAPE_STRIP:
-			return ledscape_strip_init(config, no_pru_init);
+			return ledscape_strip_init(config, no_pru_init, 0, "./lib/ws281x.bin");
 		default:
 			fprintf(stderr, "unknown config type %d\n", config->type);
 			return NULL;

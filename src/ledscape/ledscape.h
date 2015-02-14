@@ -95,6 +95,21 @@ ledscape_init(
 	int no_init_pru
 );
 
+extern ledscape_t *
+ledscape_matrix_init(
+	ledscape_config_t * config,
+	int no_init_pru,
+	int pru_number,
+	const char * pru_program
+);
+
+extern ledscape_t *
+ledscape_strip_init(
+	ledscape_config_t * config,
+	int no_init_pru,
+	int pru_number,
+	const char * pru_program
+);
 
 extern void
 ledscape_draw(
