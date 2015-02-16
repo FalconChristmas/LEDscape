@@ -16,3 +16,6 @@ all: copy
 
 copy:
 	cp -f $(FILES) $(BINDIR)
+
+clean:
+
