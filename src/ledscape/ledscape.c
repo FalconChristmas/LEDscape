@@ -70,58 +70,6 @@ ledscape_gpio_init(void)
 }
 
 
-/** Command structure shared with the PRU.
- *
- * This is mapped into the PRU data RAM and points to the
- * frame buffer in the shared DDR segment.
- *
- * Changing this requires changes in ws281x.p
- */
-typedef struct
-{
-	// in the DDR shared with the PRU
-	uintptr_t pixels_dma;
-
-	// Length in pixels of the longest LED strip.
-	unsigned num_pixels;
-
-	// write 1 to start, 0xFF to abort. will be cleared when started
-	volatile unsigned command;
-
-	// will have a non-zero response written when done
-	volatile unsigned response;
-} __attribute__((__packed__)) ws281x_command_t;
-
-#if 0
-typedef struct
-{
-	uint32_t x_offset;
-	uint32_t y_offset;
-} led_matrix_t;
-
-#define NUM_MATRIX 16
-
-typedef struct
-{
-	uint32_t matrix_width; // of a full chain
-	uint32_t matrix_height; // number of rows per-output (8 or 16)
-	led_matrix_t matrix[NUM_MATRIX];
-} led_matrix_config_t;
-#endif
-
-
-
-struct ledscape
-{
-	ws281x_command_t * ws281x;
-	pru_t * pru;
-	unsigned width;
-	unsigned height;
-	unsigned frame_size;
-	ledscape_config_t * config;
-};
-
-
 #if 0
 /** Retrieve one of the two frame buffers. */
 ledscape_frame_t *

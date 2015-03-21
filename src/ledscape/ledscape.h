@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 
+#include "pru.h"
+
 /** The number of strips supported.
  *
  * Changing this also requires changes in ws281x.p to stride the
@@ -166,6 +168,42 @@ ledscape_config_t *
 ledscape_config(
 	const char * filename
 );
+
+/***************************************************************************/
+/** Structs moved from ledscape.c so that we can bypass the draw routines **/
+/** Command structure shared with the PRU.
+ *
+ * This is mapped into the PRU data RAM and points to the
+ * frame buffer in the shared DDR segment.
+ *
+ * Changing this requires changes in ws281x.p
+ */
+typedef struct
+{
+	// in the DDR shared with the PRU
+	uintptr_t pixels_dma;
+
+	// Length in pixels of the longest LED strip.
+	unsigned num_pixels;
+
+	// write 1 to start, 0xFF to abort. will be cleared when started
+	volatile unsigned command;
+
+	// will have a non-zero response written when done
+	volatile unsigned response;
+} __attribute__((__packed__)) ws281x_command_t;
+
+struct ledscape
+{
+	ws281x_command_t * ws281x;
+	pru_t * pru;
+	unsigned width;
+	unsigned height;
+	unsigned frame_size;
+	ledscape_config_t * config;
+};
+/***************************************************************************/
+
 
 #ifdef __cplusplus
 };
