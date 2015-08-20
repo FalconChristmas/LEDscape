@@ -189,7 +189,8 @@ ledscape_matrix_panel_copy(
 			// the top half and bottom half of the panels
 			// are squished together in the output since
 			// they are drawn simultaneously.
-			uint8_t * const pix = &out[x*row_stride + (y/8)*3 + (y%8)*row_len];
+			//uint8_t * const pix = &out[x*row_stride + (y/8)*3 + (y%8)*row_len];
+			uint8_t * const pix = &out[x*row_stride + (y/(config->panel_height/2))*3 + (y%(config->panel_height/2))*row_len];
 
 			pix[0] = (col >> 16) & 0xFF; // red
 			pix[1] = (col >>  8) & 0xFF; // green
