@@ -342,6 +342,9 @@ ledscape_matrix_init(
 		.pru		= pru,
 		.width		= config->leds_width,
 		.height		= config->leds_height,
+		.bright_shift	= config->bright_shift,
+		.outputCount	= config->outputCount,
+		.panelCount	= config->panelCount,
 		.ws281x		= pru->data_ram,
 		.frame_size	= frame_size,
 	};
@@ -349,6 +352,9 @@ ledscape_matrix_init(
 	*(leds->ws281x) = (ws281x_command_t) {
 		.pixels_dma	= 0, // will be set in draw routine
 		.num_pixels	= (config->leds_width * 3) * 16,
+		.bright_shift   = config->bright_shift,
+		.outputCount	= config->outputCount,
+		.panelCount	= config->panelCount,
 		.command	= 0,
 		.response	= 0,
 	};

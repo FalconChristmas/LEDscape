@@ -40,6 +40,9 @@ typedef struct {
 	int panel_height;
 	int leds_width;
 	int leds_height;
+	int bright_shift;
+	int outputCount;
+	int panelCount;
 	ledscape_matrix_panel_t panels[LEDSCAPE_MATRIX_OUTPUTS][LEDSCAPE_MATRIX_PANELS];
 } ledscape_matrix_config_t;
 
@@ -191,6 +194,15 @@ typedef struct
 
 	// will have a non-zero response written when done
 	volatile unsigned response;
+
+	// Brightness of pixels (0-7)
+	unsigned bright_shift;
+
+	// Outputs to use (1-8)
+	unsigned outputCount;
+
+	// Panels per output (1-8)
+	unsigned panelCount;
 } __attribute__((__packed__)) ws281x_command_t;
 
 struct ledscape
@@ -199,6 +211,9 @@ struct ledscape
 	pru_t * pru;
 	unsigned width;
 	unsigned height;
+	unsigned bright_shift;
+	unsigned outputCount;
+	unsigned panelCount;
 	unsigned frame_size;
 	ledscape_config_t * config;
 };
