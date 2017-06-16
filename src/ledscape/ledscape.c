@@ -200,6 +200,104 @@ ledscape_matrix_panel_copy(
 	}
 }
 
+static void
+ledscape_map_matrix_bits(
+     ledscape_t * const leds,
+     uint8_t * din,
+     uint8_t * out
+)
+{
+    const ledscape_matrix_config_t * const config
+        = &leds->config->matrix_config;
+    const size_t panel_stride = config->panel_width*2*3*LEDSCAPE_MATRIX_OUTPUTS;
+    
+    uint8_t *rowin = din;
+    uint8_t *rowout = out;
+    for (unsigned row = 0; row < 8; row++, rowin += 12288) {
+        for (unsigned bit = 8; bit > 0; ) {
+            --bit;
+            /*
+            if (row == 0 && bit == 7) {
+                printf("\nbit %d\n", bit);
+            }
+             */
+            uint8_t mask = 1 << bit;
+
+            uint8_t red1[8];
+            uint8_t green1[8];
+            uint8_t blue1[8];
+            uint8_t red2[8];
+            uint8_t green2[8];
+            uint8_t blue2[8];
+            memset(red1, 0, 8);
+            memset(green1, 0, 8);
+            memset(blue1, 0, 8);
+            memset(red2, 0, 8);
+            memset(green2, 0, 8);
+            memset(blue2, 0, 8);
+
+            int curout = 0;
+            int inbit = 1;
+            int curbit = 0;
+            int offset = 0;
+            do {
+                
+                if (rowin[offset] & mask) {
+                    red1[curout] |= inbit;
+                }
+                if (rowin[offset + 1] & mask) {
+                    green1[curout] |= inbit;
+                }
+                if (rowin[offset + 2] & mask) {
+                    blue1[curout] |= inbit;
+                }
+                if (rowin[offset + 3] & mask) {
+                    red2[curout] |= inbit;
+                }
+                if (rowin[offset + 4] & mask) {
+                    green2[curout] |= inbit;
+                }
+                if (rowin[offset + 5] & mask) {
+                    blue2[curout] |= inbit;
+                }
+                offset += 6;
+                curout++;
+                if (curout == 8) {
+                    curout = 0;
+                    curbit++;
+                    inbit = 1 << curbit;
+                    if (curbit == 8) {
+                        for (int x = 0; x < 8; x++) {
+                            rowout[0] = red1[x];
+                            rowout[1] = green1[x];
+                            rowout[2] = blue1[x];
+                            rowout[3] = red2[x];
+                            rowout[4] = green2[x];
+                            rowout[5] = blue2[x];
+                            
+                            /*
+                            if (row == 0 && bit == 7) {
+                                printf("%2X ", rowout[0]);
+                            }
+                             */
+                            rowout += 6;
+                        }
+                        memset(red1, 0, 8);
+                        memset(green1, 0, 8);
+                        memset(blue1, 0, 8);
+                        memset(red2, 0, 8);
+                        memset(green2, 0, 8);
+                        memset(blue2, 0, 8);
+                        
+                        curbit = 0;
+                        inbit = 1;
+                    }
+                }
+                
+            } while (offset < 12288);
+        }
+    }
+}
 
 static void
 ledscape_matrix_draw(
@@ -209,7 +307,8 @@ ledscape_matrix_draw(
 {
 	static unsigned frame = 0;
 	const uint32_t * const in = buffer;
-	uint8_t * const out = leds->pru->ddr + leds->frame_size * frame;
+	uint8_t * const dout = leds->pru->ddr + leds->frame_size * frame;
+    uint8_t * out = malloc(leds->frame_size);
 
 	// matrix is re-packed such that a 6-byte read will bring in
 	// the brightness values for all six outputs of a given panel.
@@ -251,7 +350,50 @@ ledscape_matrix_draw(
 			);
 		}
 	}
+    /*
+    FILE *rfile;
+    rfile=fopen("/tmp/framerates.txt","w");
+    for (int x = 0; x < 8*8; x++) {
+        uint8_t * outb = dout;
+        outb += x*1536;
+        uint32_t tm = *((uint32_t*)outb);
+        outb += 4;
+        uint32_t tm2 = *((uint32_t*)outb);
+        outb += 4;
+        uint32_t tm3 = *((uint32_t*)outb);
+        fprintf(rfile, "%d   %8X   %8X   %8X\n", x, tm, tm2, tm3);
+        
+    }
+    fclose(rfile);
+    */
+    
+    ledscape_map_matrix_bits(leds, out, dout);
+    //memcpy(dout, outb, leds->frame_size);
+    /*
+    static int count = 0;
+    if (count == 10) {
+        FILE *rfile, *gfile, *bfile, *afile;
+        rfile=fopen("/tmp/frame_r.data","wb");
+        gfile=fopen("/tmp/frame_g.data","wb");
+        bfile=fopen("/tmp/frame_b.data","wb");
+        afile=fopen("/tmp/frame.data","wb");
+        fwrite(dout, leds->frame_size, 1, afile);
+        int f = 0;
+        while (f < (12288*8)) {
+            fwrite(&dout[f++], 1, 1, rfile);
+            fwrite(&dout[f++], 1, 1, gfile);
+            fwrite(&dout[f++], 1, 1, bfile);
+        }
+        fclose(rfile);
+        fclose(gfile);
+        fclose(bfile);
+        fclose(afile);
+        count = 0;
+    }
+    count++;
+    */
 
+    free(out);
 	leds->ws281x->pixels_dma = leds->pru->ddr_addr + leds->frame_size * frame;
 	// disable double buffering for now
 	//frame = (frame + 1) & 1;
@@ -362,15 +504,16 @@ ledscape_matrix_init(
 	ledscape_gpio_init();
 
 	// Initiate the PRU program
-	if (!no_pru_init)
+    if (!no_pru_init) {
 		pru_exec(pru, pru_program);
 
-	// Watch for a done response that indicates a proper startup
-	// \todo timeout if it fails
-	printf("waiting for response\n");
-	while (!leds->ws281x->response)
-		;
-	printf("got response\n");
+        // Watch for a done response that indicates a proper startup
+        // \todo timeout if it fails
+        printf("waiting for response\n");
+        while (!leds->ws281x->response)
+            ;
+        printf("got response\n");
+    }
 
 	return leds;
 }
@@ -481,7 +624,18 @@ ledscape_close(
 )
 {
 	// Signal a halt command
-	leds->ws281x->command = 0xFF;
+    switch (leds->config->type)
+    {
+        case LEDSCAPE_MATRIX:
+            leds->ws281x->pixels_dma = 0xFF;
+            break;
+        case LEDSCAPE_STRIP:
+            leds->ws281x->command = 0xFF;
+            break;
+        default:
+            fprintf(stderr, "unknown config type %d\n", leds->config->type);
+            break;
+    }
 	pru_close(leds->pru);
 }
 
