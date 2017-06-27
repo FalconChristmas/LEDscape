@@ -32,7 +32,7 @@
  * \todo: Find a way to unify this with the defines in the .p file
  */
 static const uint8_t gpios0[] = {
-	23, 27, 22, 10, 9, 8, 26, 11, 30, 31, 5, 3, 20, 4, 2, 14, 7, 15
+	23, 27, 22, 10, 9, 8, 26, 11, 30, 31, 5, 3, 4, 2, 14, 15
 };
 
 static const uint8_t gpios1[] = {
@@ -44,7 +44,7 @@ static const uint8_t gpios2[] = {
 };
 
 static const uint8_t gpios3[] = {
-	21, 19, 15, 14, 17, 16
+	21, 19, 15, 14, 17, 16, 18, 20
 };
 
 #define ARRAY_COUNT(a) ((sizeof(a) / sizeof(*a)))
@@ -84,16 +84,6 @@ ledscape_frame(
 	return (ledscape_frame_t*)((uint8_t*) leds->pru->ddr + leds->frame_size * frame);
 }
 #endif
-
-
-static uint8_t
-bright_map(
-	uint8_t val
-)
-{
-	return val;
-}
-
 
 static uint8_t *
 ledscape_remap(
@@ -209,12 +199,15 @@ ledscape_map_matrix_bits(
 {
     const ledscape_matrix_config_t * const config
         = &leds->config->matrix_config;
-    const size_t panel_stride = config->panel_width*2*3*LEDSCAPE_MATRIX_OUTPUTS;
     
     uint8_t *rowin = din;
     uint8_t *rowout = out;
-    for (unsigned row = 0; row < 8; row++, rowin += 12288) {
-        for (unsigned bit = 8; bit > 0; ) {
+    int maxRows = config->panel_height / 2;
+    if (maxRows <= 0 || maxRows > 32) {
+        maxRows = 8;
+    }
+    for (int row = 0; row < maxRows; row++, rowin += 12288) {
+        for (int bit = 8; bit > 0; ) {
             --bit;
             /*
             if (row == 0 && bit == 7) {
@@ -299,6 +292,27 @@ ledscape_map_matrix_bits(
     }
 }
 
+static void printStats(uint32_t *stats) {
+    FILE *rfile;
+    rfile=fopen("/tmp/framerates.txt","w");
+    fprintf(rfile, "DDR  %X\n", stats[0]);
+    stats++;
+    fprintf(rfile, "Width  %X\n", stats[0]);
+    stats++;
+    fprintf(rfile, "  cmd: %d   response: %d      panelCount: %d    stats: %d\n", stats[0], stats[1], stats[2], stats[3]);
+    stats += 4;
+    for (int x = 7; x >= 0; x--) {
+        fprintf(rfile, "DV: %d    %8X   %8X\n", x, stats[0], stats[1]);
+        stats += 2;
+    }
+    
+    for (int x = 0; x < 64; x++) {
+        fprintf(rfile, "%2d   %8X   %8X   %8X\n", x, stats[0], stats[1], stats[2]);
+        stats += 3;
+    }
+    fclose(rfile);
+}
+
 static void
 ledscape_matrix_draw(
 	ledscape_t * const leds,
@@ -350,49 +364,15 @@ ledscape_matrix_draw(
 			);
 		}
 	}
-    /*
-    FILE *rfile;
-    rfile=fopen("/tmp/framerates.txt","w");
-    for (int x = 0; x < 8*8; x++) {
-        uint8_t * outb = dout;
-        outb += x*1536;
-        uint32_t tm = *((uint32_t*)outb);
-        outb += 4;
-        uint32_t tm2 = *((uint32_t*)outb);
-        outb += 4;
-        uint32_t tm3 = *((uint32_t*)outb);
-        fprintf(rfile, "%d   %8X   %8X   %8X\n", x, tm, tm2, tm3);
-        
+    
+    uint32_t *stats = (uint32_t*)leds->pru->data_ram;
+    if (stats[5]) {
+        printStats(stats);
     }
-    fclose(rfile);
-    */
     
     ledscape_map_matrix_bits(leds, out, dout);
-    //memcpy(dout, outb, leds->frame_size);
-    /*
-    static int count = 0;
-    if (count == 10) {
-        FILE *rfile, *gfile, *bfile, *afile;
-        rfile=fopen("/tmp/frame_r.data","wb");
-        gfile=fopen("/tmp/frame_g.data","wb");
-        bfile=fopen("/tmp/frame_b.data","wb");
-        afile=fopen("/tmp/frame.data","wb");
-        fwrite(dout, leds->frame_size, 1, afile);
-        int f = 0;
-        while (f < (12288*8)) {
-            fwrite(&dout[f++], 1, 1, rfile);
-            fwrite(&dout[f++], 1, 1, gfile);
-            fwrite(&dout[f++], 1, 1, bfile);
-        }
-        fclose(rfile);
-        fclose(gfile);
-        fclose(bfile);
-        fclose(afile);
-        count = 0;
-    }
-    count++;
-    */
-
+    //memcpy(dout, out, leds->frame_size);
+    
     free(out);
 	leds->ws281x->pixels_dma = leds->pru->ddr_addr + leds->frame_size * frame;
 	// disable double buffering for now
@@ -484,22 +464,22 @@ ledscape_matrix_init(
 		.pru		= pru,
 		.width		= config->leds_width,
 		.height		= config->leds_height,
-		.bright_shift	= config->bright_shift,
-		.outputCount	= config->outputCount,
 		.panelCount	= config->panelCount,
 		.ws281x		= pru->data_ram,
 		.frame_size	= frame_size,
 	};
-
+    
 	*(leds->ws281x) = (ws281x_command_t) {
 		.pixels_dma	= 0, // will be set in draw routine
 		.num_pixels	= (config->leds_width * 3) * 16,
-		.bright_shift   = config->bright_shift,
-		.outputCount	= config->outputCount,
 		.panelCount	= config->panelCount,
 		.command	= 0,
 		.response	= 0,
 	};
+
+    for (int x = 0; x < 16; x++) {
+        leds->ws281x->brightInfo[x] = 0;
+    }
 
 	ledscape_gpio_init();
 
