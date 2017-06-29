@@ -206,7 +206,8 @@ ledscape_map_matrix_bits(
     if (maxRows <= 0 || maxRows > 32) {
         maxRows = 8;
     }
-    for (int row = 0; row < maxRows; row++, rowin += 12288) {
+    int bytesPerRow = LEDSCAPE_MATRIX_OUTPUTS * LEDSCAPE_MATRIX_PANELS * 3 * 2 * config->panel_width;
+    for (int row = 0; row < maxRows; row++, rowin += bytesPerRow) {
         for (int bit = 8; bit > 0; ) {
             --bit;
             /*
@@ -287,12 +288,12 @@ ledscape_map_matrix_bits(
                     }
                 }
                 
-            } while (offset < 12288);
+            } while (offset < bytesPerRow);
         }
     }
 }
 
-static void printStats(uint32_t *stats) {
+static void printStats(uint32_t *stats, int h) {
     FILE *rfile;
     rfile=fopen("/tmp/framerates.txt","w");
     fprintf(rfile, "DDR  %X\n", stats[0]);
@@ -306,11 +307,30 @@ static void printStats(uint32_t *stats) {
         stats += 2;
     }
     
-    for (int x = 0; x < 64; x++) {
+    for (int x = 0; x < (8 * h / 2); x++) {
         fprintf(rfile, "%2d   %8X   %8X   %8X\n", x, stats[0], stats[1], stats[2]);
         stats += 3;
     }
     fclose(rfile);
+}
+static void dumpData(uint8_t *data1, uint8_t *data2, size_t sz) {
+    static int frame = 0;
+    
+    if (frame == 0) {
+        FILE *rfile;
+        rfile=fopen("/tmp/data.dump.orig","wb");
+        fwrite(data1, sz, 1, rfile);
+        fclose(rfile);
+
+        rfile=fopen("/tmp/data.dump.mapped","wb");
+        fwrite(data2, sz, 1, rfile);
+        fclose(rfile);
+    }
+    frame++;
+    if (frame == 20) {
+        frame = 0;
+    }
+    
 }
 
 static void
@@ -367,11 +387,12 @@ ledscape_matrix_draw(
     
     uint32_t *stats = (uint32_t*)leds->pru->data_ram;
     if (stats[5]) {
-        printStats(stats);
+        printStats(stats, config->panel_height);
     }
-    
+
     ledscape_map_matrix_bits(leds, out, dout);
     //memcpy(dout, out, leds->frame_size);
+    //dumpData(out, dout, leds->frame_size);
     
     free(out);
 	leds->ws281x->pixels_dma = leds->pru->ddr_addr + leds->frame_size * frame;

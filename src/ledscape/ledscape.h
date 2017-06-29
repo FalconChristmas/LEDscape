@@ -30,7 +30,7 @@ typedef struct {
 } ledscape_matrix_panel_t;
 
 #define LEDSCAPE_MATRIX_OUTPUTS 8 // number of outputs on the cape
-#define LEDSCAPE_MATRIX_PANELS 8 // number of panels chained per output
+#define LEDSCAPE_MATRIX_PANELS 12 // number of panels chained per output
 
 typedef struct {
 	int type;
