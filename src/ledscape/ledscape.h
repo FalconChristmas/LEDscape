@@ -41,6 +41,7 @@ typedef struct {
 	int leds_width;
 	int leds_height;
 	int panelCount;
+    int rowsPerOutput;
 	ledscape_matrix_panel_t panels[LEDSCAPE_MATRIX_OUTPUTS][LEDSCAPE_MATRIX_PANELS];
 } ledscape_matrix_config_t;
 
@@ -195,7 +196,10 @@ typedef struct
 	volatile unsigned response;
 
 	// Panels per output (1-8)
-	uint32_t panelCount;
+	uint16_t panelCount;
+
+    // Rows to output (8 : 1/8 scan,  16: 1/16 scan, etc...)
+    uint16_t rowsPerOutput;
     
     uint32_t statEnable;
     
@@ -212,6 +216,7 @@ struct ledscape
 	unsigned width;
 	unsigned height;
 	unsigned panelCount;
+    unsigned rowsPerOutput;
 	unsigned frame_size;
 	ledscape_config_t * config;
 };

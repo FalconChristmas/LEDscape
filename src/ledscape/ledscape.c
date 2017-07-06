@@ -300,7 +300,7 @@ static void printStats(uint32_t *stats, int h) {
     stats++;
     fprintf(rfile, "Width  %X\n", stats[0]);
     stats++;
-    fprintf(rfile, "  cmd: %d   response: %d      panelCount: %d    stats: %d\n", stats[0], stats[1], stats[2], stats[3]);
+    fprintf(rfile, "  cmd: %d   response: %d      panelCount: %d   rowsPerOutput: %d  stats: %d\n", stats[0], stats[1], stats[2] & 0xFF, (stats[2] >> 16), stats[3]);
     stats += 4;
     for (int x = 7; x >= 0; x--) {
         fprintf(rfile, "DV: %d    %8X   %8X\n", x, stats[0], stats[1]);
@@ -486,6 +486,7 @@ ledscape_matrix_init(
 		.width		= config->leds_width,
 		.height		= config->leds_height,
 		.panelCount	= config->panelCount,
+        .rowsPerOutput = config->rowsPerOutput,
 		.ws281x		= pru->data_ram,
 		.frame_size	= frame_size,
 	};
@@ -494,6 +495,7 @@ ledscape_matrix_init(
 		.pixels_dma	= 0, // will be set in draw routine
 		.num_pixels	= (config->leds_width * 3) * 16,
 		.panelCount	= config->panelCount,
+        .rowsPerOutput = config->rowsPerOutput,
 		.command	= 0,
 		.response	= 0,
 	};
