@@ -504,7 +504,7 @@ ledscape_matrix_init(
         leds->ws281x->brightInfo[x] = 0;
     }
 
-	ledscape_gpio_init();
+	//ledscape_gpio_init();
 
 	// Initiate the PRU program
     if (!no_pru_init) {
@@ -564,7 +564,7 @@ ledscape_strip_init(
 
 	printf("pixels: %d\n", leds->ws281x->num_pixels);
 
-	ledscape_gpio_init();
+	//ledscape_gpio_init();
 
 	// Initiate the PRU program
 	if (!no_pru_init)
