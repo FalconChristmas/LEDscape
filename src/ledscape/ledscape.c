@@ -202,11 +202,19 @@ ledscape_map_matrix_bits(
     
     uint8_t *rowin = din;
     uint8_t *rowout = out;
-    int maxRows = config->panel_height / 2;
+    int maxRows = config->rowsPerOutput;
     if (maxRows <= 0 || maxRows > 32) {
         maxRows = 8;
     }
+    int interleave = 0;
+    int row1 = 1;
     int bytesPerRow = LEDSCAPE_MATRIX_OUTPUTS * LEDSCAPE_MATRIX_PANELS * 3 * 2 * config->panel_width;
+    int interleaveOffset = 0;
+    if (maxRows * 4 == config->panel_height) {
+        //need to interleave (1/4 scan)
+        interleave = 1;
+        interleaveOffset = bytesPerRow * 4;
+    }
     for (int row = 0; row < maxRows; row++, rowin += bytesPerRow) {
         for (int bit = 8; bit > 0; ) {
             --bit;
@@ -236,22 +244,22 @@ ledscape_map_matrix_bits(
             int offset = 0;
             do {
                 
-                if (rowin[offset] & mask) {
+                if (rowin[offset + interleaveOffset] & mask) {
                     red1[curout] |= inbit;
                 }
-                if (rowin[offset + 1] & mask) {
+                if (rowin[offset + interleaveOffset + 1] & mask) {
                     green1[curout] |= inbit;
                 }
-                if (rowin[offset + 2] & mask) {
+                if (rowin[offset + interleaveOffset + 2] & mask) {
                     blue1[curout] |= inbit;
                 }
-                if (rowin[offset + 3] & mask) {
+                if (rowin[offset + interleaveOffset + 3] & mask) {
                     red2[curout] |= inbit;
                 }
-                if (rowin[offset + 4] & mask) {
+                if (rowin[offset + interleaveOffset + 4] & mask) {
                     green2[curout] |= inbit;
                 }
-                if (rowin[offset + 5] & mask) {
+                if (rowin[offset + interleaveOffset + 5] & mask) {
                     blue2[curout] |= inbit;
                 }
                 offset += 6;
@@ -261,6 +269,18 @@ ledscape_map_matrix_bits(
                     curbit++;
                     inbit = 1 << curbit;
                     if (curbit == 8) {
+                        if (interleave) {
+                            if (row1) {
+                                row1 = 0;
+                                interleaveOffset = 0;
+                                offset -= 6 * 8 * 8;
+                            } else {
+                                row1 = 1;
+                                interleaveOffset = bytesPerRow * 4;
+                            }
+                        }
+
+                        
                         for (int x = 0; x < 8; x++) {
                             rowout[0] = red1[x];
                             rowout[1] = green1[x];
