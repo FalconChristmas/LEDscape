@@ -211,9 +211,9 @@ ledscape_map_matrix_bits(
     int bytesPerRow = LEDSCAPE_MATRIX_OUTPUTS * LEDSCAPE_MATRIX_PANELS * 3 * 2 * config->panel_width;
     int interleaveOffset = 0;
     if (maxRows * 4 == config->panel_height) {
-        //need to interleave (1/4 scan)
+        //need to interleave (32x16 1/4 scan  or  32x32 1/8 scan or 40x20 1/5 scan,  etc...)
         interleave = 1;
-        interleaveOffset = bytesPerRow * 4;
+        interleaveOffset = bytesPerRow * maxRows;
     }
     for (int row = 0; row < maxRows; row++, rowin += bytesPerRow) {
         for (int bit = 8; bit > 0; ) {
@@ -242,6 +242,10 @@ ledscape_map_matrix_bits(
             int inbit = 1;
             int curbit = 0;
             int offset = 0;
+            if (config->initialSkip != 0) {
+                rowout += config->initialSkip;
+                offset = config->initialSkip * 8;
+            }
             do {
                 
                 if (rowin[offset + interleaveOffset] & mask) {
@@ -320,7 +324,7 @@ static void printStats(uint32_t *stats, int h) {
     stats++;
     fprintf(rfile, "Width  %X\n", stats[0]);
     stats++;
-    fprintf(rfile, "  cmd: %d   response: %d      panelCount: %d   rowsPerOutput: %d  stats: %d\n", stats[0], stats[1], stats[2] & 0xFF, (stats[2] >> 16), stats[3]);
+    fprintf(rfile, "  cmd: %d   response: %d      initialSkip: %d   rowsPerOutput: %d  stats: %d\n", stats[0], stats[1], stats[2] & 0xFFFF, (stats[2] >> 16), stats[3]);
     stats += 4;
     for (int x = 7; x >= 0; x--) {
         fprintf(rfile, "DV: %d    %8X   %8X\n", x, stats[0], stats[1]);
@@ -505,7 +509,7 @@ ledscape_matrix_init(
 		.pru		= pru,
 		.width		= config->leds_width,
 		.height		= config->leds_height,
-		.panelCount	= config->panelCount,
+		.initialSkip = config->initialSkip,
         .rowsPerOutput = config->rowsPerOutput,
 		.ws281x		= pru->data_ram,
 		.frame_size	= frame_size,
@@ -514,7 +518,7 @@ ledscape_matrix_init(
 	*(leds->ws281x) = (ws281x_command_t) {
 		.pixels_dma	= 0, // will be set in draw routine
 		.num_pixels	= (config->leds_width * 3) * 16,
-		.panelCount	= config->panelCount,
+		.initialSkip	= config->initialSkip,
         .rowsPerOutput = config->rowsPerOutput,
 		.command	= 0,
 		.response	= 0,
