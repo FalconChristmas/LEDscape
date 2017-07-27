@@ -190,6 +190,16 @@ ledscape_matrix_panel_copy(
 	}
 }
 
+static inline uint8_t mapColor(uint8_t v, uint8_t bits) {
+    if (bits == 6 && (v == 3 || v == 2)) {
+        return 4;
+    }
+    if (bits == 7 && v == 1) {
+        return 2;
+    }
+    return v;
+}
+
 static void
 ledscape_map_matrix_bits(
      ledscape_t * const leds,
@@ -206,6 +216,7 @@ ledscape_map_matrix_bits(
     if (maxRows <= 0 || maxRows > 32) {
         maxRows = 8;
     }
+    uint8_t bitsToOutput = config->bitsToOutput;
     int interleave = 0;
     int row1 = 1;
     int bytesPerRow = LEDSCAPE_MATRIX_OUTPUTS * LEDSCAPE_MATRIX_PANELS * 3 * 2 * config->panel_width;
@@ -216,7 +227,7 @@ ledscape_map_matrix_bits(
         interleaveOffset = bytesPerRow * maxRows;
     }
     for (int row = 0; row < maxRows; row++, rowin += bytesPerRow) {
-        for (int bit = 8; bit > 0; ) {
+        for (int bit = 8; bit > (8 - config->bitsToOutput); ) {
             --bit;
             /*
             if (row == 0 && bit == 7) {
@@ -248,22 +259,22 @@ ledscape_map_matrix_bits(
             }
             do {
                 
-                if (rowin[offset + interleaveOffset] & mask) {
+                if (mapColor(rowin[offset + interleaveOffset], bitsToOutput) & mask) {
                     red1[curout] |= inbit;
                 }
-                if (rowin[offset + interleaveOffset + 1] & mask) {
+                if (mapColor(rowin[offset + interleaveOffset + 1], bitsToOutput) & mask) {
                     green1[curout] |= inbit;
                 }
-                if (rowin[offset + interleaveOffset + 2] & mask) {
+                if (mapColor(rowin[offset + interleaveOffset + 2], bitsToOutput) & mask) {
                     blue1[curout] |= inbit;
                 }
-                if (rowin[offset + interleaveOffset + 3] & mask) {
+                if (mapColor(rowin[offset + interleaveOffset + 3], bitsToOutput) & mask) {
                     red2[curout] |= inbit;
                 }
-                if (rowin[offset + interleaveOffset + 4] & mask) {
+                if (mapColor(rowin[offset + interleaveOffset + 4], bitsToOutput) & mask) {
                     green2[curout] |= inbit;
                 }
-                if (rowin[offset + interleaveOffset + 5] & mask) {
+                if (mapColor(rowin[offset + interleaveOffset + 5], bitsToOutput) & mask) {
                     blue2[curout] |= inbit;
                 }
                 offset += 6;
@@ -313,6 +324,9 @@ ledscape_map_matrix_bits(
                 }
                 
             } while (offset < bytesPerRow);
+        }
+        for (int x = 0; x < (8 - config->bitsToOutput); x++) {
+            rowout += 6 * LEDSCAPE_MATRIX_PANELS * LEDSCAPE_MATRIX_OUTPUTS * config->panel_width / 8;
         }
     }
 }
@@ -511,6 +525,7 @@ ledscape_matrix_init(
 		.height		= config->leds_height,
 		.initialSkip = config->initialSkip,
         .rowsPerOutput = config->rowsPerOutput,
+        .bitsToOutput = config->bitsToOutput,
 		.ws281x		= pru->data_ram,
 		.frame_size	= frame_size,
 	};
@@ -520,6 +535,7 @@ ledscape_matrix_init(
 		.num_pixels	= (config->leds_width * 3) * 16,
 		.initialSkip	= config->initialSkip,
         .rowsPerOutput = config->rowsPerOutput,
+        .bitsToOutput = config->bitsToOutput,
 		.command	= 0,
 		.response	= 0,
 	};

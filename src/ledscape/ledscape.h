@@ -42,6 +42,7 @@ typedef struct {
 	int leds_height;
 	int initialSkip;
     int rowsPerOutput;
+    int bitsToOutput;
 	ledscape_matrix_panel_t panels[LEDSCAPE_MATRIX_OUTPUTS][LEDSCAPE_MATRIX_PANELS];
 } ledscape_matrix_config_t;
 
@@ -199,7 +200,9 @@ typedef struct
 	uint16_t initialSkip;
 
     // Rows to output (8 : 1/8 scan,  16: 1/16 scan, etc...)
-    uint16_t rowsPerOutput;
+    uint8_t rowsPerOutput;
+    
+    uint8_t bitsToOutput;
     
     uint32_t statEnable;
     
@@ -217,6 +220,7 @@ struct ledscape
 	unsigned height;
 	unsigned initialSkip;
     unsigned rowsPerOutput;
+    unsigned bitsToOutput;
 	unsigned frame_size;
 	ledscape_config_t * config;
 };
