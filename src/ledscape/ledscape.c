@@ -222,9 +222,13 @@ ledscape_map_matrix_bits(
     int bytesPerRow = LEDSCAPE_MATRIX_OUTPUTS * LEDSCAPE_MATRIX_PANELS * 3 * 2 * config->panel_width;
     int interleaveOffset = 0;
     if (maxRows * 4 == config->panel_height) {
-        //need to interleave (32x16 1/4 scan  or  32x32 1/8 scan or 40x20 1/5 scan,  etc...)
+        //need to interleave 2:1 (32x16 1/4 scan  or  32x32 1/8 scan or 40x20 1/5 scan,  etc...)
         interleave = 1;
         interleaveOffset = bytesPerRow * maxRows;
+    } else if (maxRows * 8 == config->panel_height) {
+        //need to interleave 4:1 (32x16 1/2 scan  or  32x32 1/4)
+        interleave = 3;
+        interleaveOffset = bytesPerRow * maxRows * interleave;
     }
     for (int row = 0; row < maxRows; row++, rowin += bytesPerRow) {
         for (int bit = 8; bit > (8 - config->bitsToOutput); ) {
@@ -253,10 +257,12 @@ ledscape_map_matrix_bits(
             int inbit = 1;
             int curbit = 0;
             int offset = 0;
+            /*
             if (config->initialSkip != 0) {
                 rowout += config->initialSkip;
                 offset = config->initialSkip * 8;
             }
+            */
             do {
                 
                 if (mapColor(rowin[offset + interleaveOffset], bitsToOutput) & mask) {
@@ -285,13 +291,13 @@ ledscape_map_matrix_bits(
                     inbit = 1 << curbit;
                     if (curbit == 8) {
                         if (interleave) {
-                            if (row1) {
-                                row1 = 0;
-                                interleaveOffset = 0;
-                                offset -= 6 * 8 * 8;
+                            if (!row1) {
+                                row1 = interleave;
+                                interleaveOffset = bytesPerRow * maxRows * interleave;
                             } else {
-                                row1 = 1;
-                                interleaveOffset = bytesPerRow * 4;
+                                row1--;
+                                interleaveOffset -= bytesPerRow * maxRows;
+                                offset -= 6 * 8 * 8;
                             }
                         }
 
