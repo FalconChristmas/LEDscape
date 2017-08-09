@@ -344,16 +344,21 @@ static void printStats(uint32_t *stats, int h) {
     stats++;
     fprintf(rfile, "Width  %X\n", stats[0]);
     stats++;
-    fprintf(rfile, "  cmd: %d   response: %d      initialSkip: %d   rowsPerOutput: %d  stats: %d\n", stats[0], stats[1], stats[2] & 0xFFFF, (stats[2] >> 16), stats[3]);
+    fprintf(rfile, "  cmd: %d   response: %d\n", stats[0], stats[1]);
+    fprintf(rfile, "  initialSkip: %d   rowsPerOutput: %d   bitsToOutput:  %d  stats: %d\n",
+            stats[2] & 0xFFFF, (stats[2] >> 16) & 0xFF,  (stats[2] >> 24) & 0xFF, stats[3]);
     stats += 4;
-    for (int x = 7; x >= 0; x--) {
-        fprintf(rfile, "DV: %d    %8X   %8X\n", x, stats[0], stats[1]);
+    int configs[8];
+    for (int x = 0; x < 8; x++) {
+        configs[x] = stats[1];
+        fprintf(rfile, "DV: %d    %8X   %8X    (%8X)\n", (8-x), stats[0], stats[1], (stats[0] - stats[1]));
         stats += 2;
     }
-    
-    for (int x = 0; x < (8 * h / 2); x++) {
-        fprintf(rfile, "%2d   %8X   %8X   %8X\n", x, stats[0], stats[1], stats[2]);
-        stats += 3;
+    for (int x = 0; x < (h / 2); x++) {
+        for (int b = 0; b < 8; b++) {
+            fprintf(rfile, "r%2d  b%2d:   %8X   %8X   %8X\n", x+1, (8-b), stats[0], stats[1], stats[2]-configs[b]);
+            stats += 3;
+        }
     }
     fclose(rfile);
 }
