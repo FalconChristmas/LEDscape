@@ -219,7 +219,7 @@ ledscape_map_matrix_bits(
     uint8_t bitsToOutput = config->bitsToOutput;
     int interleave = 0;
     int row1 = 1;
-    int bytesPerRow = LEDSCAPE_MATRIX_OUTPUTS * LEDSCAPE_MATRIX_PANELS * 3 * 2 * config->panel_width;
+    int bytesPerRow = LEDSCAPE_MATRIX_OUTPUTS * config->maxPanel * 3 * 2 * config->panel_width;
     int interleaveOffset = 0;
     if (maxRows * 4 == config->panel_height) {
         //need to interleave 2:1 (32x16 1/4 scan  or  32x32 1/8 scan or 40x20 1/5 scan,  etc...)
@@ -332,7 +332,7 @@ ledscape_map_matrix_bits(
             } while (offset < bytesPerRow);
         }
         for (int x = 0; x < (8 - config->bitsToOutput); x++) {
-            rowout += 6 * LEDSCAPE_MATRIX_PANELS * LEDSCAPE_MATRIX_OUTPUTS * config->panel_width / 8;
+            rowout += 6 * config->maxPanel * LEDSCAPE_MATRIX_OUTPUTS * config->panel_width / 8;
         }
     }
 }
@@ -413,24 +413,26 @@ ledscape_matrix_draw(
 			const ledscape_matrix_panel_t * const panel
 				= &config->panels[i][j];
 
-			// the start of the panel in the input
-			// is defined by the panel's xy coordinate
-			// and the width of the input image.
-			const uint32_t * const ip
-				= &in[panel->x + panel->y*config->width];
+            if (panel->enabled) {
+                // the start of the panel in the input
+                // is defined by the panel's xy coordinate
+                // and the width of the input image.
+                const uint32_t * const ip
+                    = &in[panel->x + panel->y*config->width];
 
-			// the start of the panel's output is defined
-			// by the current output panel number and the total
-			// number of panels in the chain.
-			uint8_t * const op = &out[6*i + j*panel_stride];
-		
-			// copy the top half of this matrix
-			ledscape_matrix_panel_copy(
-				op,
-				ip,
-				config,
-				panel->rot
-			);
+                // the start of the panel's output is defined
+                // by the current output panel number and the total
+                // number of panels in the chain.
+                uint8_t * const op = &out[6*i + j*panel_stride];
+            
+                // copy the top half of this matrix
+                ledscape_matrix_panel_copy(
+                    op,
+                    ip,
+                    config,
+                    panel->rot
+                );
+            }
 		}
 	}
     
@@ -440,13 +442,14 @@ ledscape_matrix_draw(
     }
 
     ledscape_map_matrix_bits(leds, out, dout);
-    //memcpy(dout, out, leds->frame_size);
-    //dumpData(out, dout, leds->frame_size);
     
     free(out);
 	leds->ws281x->pixels_dma = leds->pru->ddr_addr + leds->frame_size * frame;
-	// disable double buffering for now
-	//frame = (frame + 1) & 1;
+	
+    if (leds->frame_size < (leds->pru->ddr_size / 2)) {
+        // if less than half the memory allocated by pru, we can double buffer
+        frame = (frame + 1) & 1;
+    }
 }
 
 
@@ -525,7 +528,11 @@ ledscape_matrix_init(
 {
 	ledscape_matrix_config_t * const config = &config_union->matrix_config;
 	pru_t * const pru = pru_init(pru_number);
-	const size_t frame_size = config->panel_width * config->panel_height * 3 * LEDSCAPE_MATRIX_OUTPUTS * LEDSCAPE_MATRIX_PANELS;
+    
+    int maxPanels = config->maxPanel;
+    
+	size_t frame_size = config->panel_width * config->panel_height * 3
+        * LEDSCAPE_MATRIX_OUTPUTS * config->maxPanel;
 
 	ledscape_t * const leds = calloc(1, sizeof(*leds));
 
@@ -585,14 +592,11 @@ ledscape_strip_init(
 	pru_t * const pru = pru_init(pru_number);
 	const size_t frame_size = 48 * config->leds_width * 8 * 3;
 
-	printf("frame-size %zu, ddr-size=%zu\n", frame_size, pru->ddr_size);
-#if 0
-	if (2 *frame_size > pru->ddr_size)
-		die("Pixel data needs at least 2 * %zu, only %zu in DDR\n",
+	if (frame_size > pru->ddr_size)
+		die("Pixel data needs at least %zu, only %zu in DDR\n",
 			frame_size,
 			pru->ddr_size
 		);
-#endif
 
 	ledscape_t * const leds = calloc(1, sizeof(*leds));
 
@@ -773,14 +777,18 @@ ledscape_printf(
 
 /** Default ledscape config */
 #define DEFAULT_MATRIX(i) { \
-		{ 0*32, i*16, 0 }, \
-		{ 1*32, i*16, 0 }, \
-		{ 2*32, i*16, 0 }, \
-		{ 3*32, i*16, 0 }, \
-		{ 4*32, i*16, 0 }, \
-		{ 5*32, i*16, 0 }, \
-		{ 6*32, i*16, 0 }, \
-		{ 7*32, i*16, 0 }, \
+		{ 0*32, i*16, 0, 0 }, \
+		{ 1*32, i*16, 0, 0 }, \
+		{ 2*32, i*16, 0, 0 }, \
+		{ 3*32, i*16, 0, 0 }, \
+		{ 4*32, i*16, 0, 0 }, \
+		{ 5*32, i*16, 0, 0 }, \
+		{ 6*32, i*16, 0, 0 }, \
+		{ 7*32, i*16, 0, 0 }, \
+        { 8*32, i*16, 0, 0 }, \
+        { 9*32, i*16, 0, 0 }, \
+        { 10*32, i*16, 0, 0 }, \
+        { 11*32, i*16, 0, 0 }, \
 	} \
 
 ledscape_config_t ledscape_matrix_default = {

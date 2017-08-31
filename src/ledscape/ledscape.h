@@ -17,7 +17,7 @@
  * Changing this also requires changes in ws281x.p to stride the
  * correct number of bytes per row..
  */
-#define LEDSCAPE_NUM_STRIPS 32
+#define LEDSCAPE_NUM_STRIPS 48
 
 #define LEDSCAPE_MATRIX 1
 #define LEDSCAPE_STRIP 2
@@ -27,6 +27,7 @@ typedef struct {
 	int x;
 	int y;
 	int rot; // 0 == none, 1 == left, 2 == right, 3 == flip
+    int enabled;
 } ledscape_matrix_panel_t;
 
 #define LEDSCAPE_MATRIX_OUTPUTS 8 // number of outputs on the cape
@@ -43,6 +44,7 @@ typedef struct {
 	int initialSkip;
     int rowsPerOutput;
     int bitsToOutput;
+    int maxPanel;
 	ledscape_matrix_panel_t panels[LEDSCAPE_MATRIX_OUTPUTS][LEDSCAPE_MATRIX_PANELS];
 } ledscape_matrix_config_t;
 
