@@ -528,11 +528,16 @@ ledscape_matrix_init(
 {
 	ledscape_matrix_config_t * const config = &config_union->matrix_config;
 	pru_t * const pru = pru_init(pru_number);
-    
-    int maxPanels = config->maxPanel;
-    
+        
 	size_t frame_size = config->panel_width * config->panel_height * 3
         * LEDSCAPE_MATRIX_OUTPUTS * config->maxPanel;
+    
+    if (frame_size > pru->ddr_size - (84*1024)) //resert top 84K for other stuff
+        die("Panel data needs at least %zu, only %zu in DDR\n",
+            frame_size,
+            pru->ddr_size
+        );
+
 
 	ledscape_t * const leds = calloc(1, sizeof(*leds));
 
@@ -590,7 +595,7 @@ ledscape_strip_init(
 {
 	ledscape_strip_config_t * const config = &config_union->strip_config;
 	pru_t * const pru = pru_init(pru_number);
-	const size_t frame_size = 48 * config->leds_width * 8 * 3;
+	const size_t frame_size = 48 * config->leds_width * 3;
 
 	if (frame_size > pru->ddr_size)
 		die("Pixel data needs at least %zu, only %zu in DDR\n",
