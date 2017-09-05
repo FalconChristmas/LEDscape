@@ -4,6 +4,10 @@
 #
 #
 
+ifneq ($(wildcard /usr/bin/ccache),)
+	CCACHE = ccache
+endif
+
 TOP ?= ../..
 OBJDIR ?= $(TOP)/obj
 LIBDIR ?= $(TOP)/lib
@@ -57,10 +61,10 @@ LDLIBS += \
 	-lpthread \
 	-lm \
 
-COMPILE.c-o = $(CROSS_COMPILE)gcc $(CFLAGS) -c -o $@ $< 
-COMPILE.cpp-o = $(CROSS_COMPILE)g++ $(CPPFLAGS) -c -o $@ $< 
-COMPILE.a = $(CROSS_COMPILE)ar crv $@ $^ 
-COMPILE.link = $(CROSS_COMPILE)g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
+COMPILE.c-o = $(CCACHE) $(CROSS_COMPILE)gcc $(CFLAGS) -c -o $@ $< 
+COMPILE.cpp-o = $(CCACHE) $(CROSS_COMPILE)g++ $(CPPFLAGS) -c -o $@ $< 
+COMPILE.a = $(CCACHE) $(CROSS_COMPILE)ar crv $@ $^ 
+COMPILE.link = $(CCACHE) $(CROSS_COMPILE)g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 $(OBJDIR)/%.o: %.c
 	$(COMPILE.c-o)
