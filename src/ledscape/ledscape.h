@@ -43,6 +43,7 @@ typedef struct {
 	int leds_height;
 	int initialSkip;
     int rowsPerOutput;
+    int interleavePixels;
     int bitsToOutput;
     int maxPanel;
 	ledscape_matrix_panel_t panels[LEDSCAPE_MATRIX_OUTPUTS][LEDSCAPE_MATRIX_PANELS];

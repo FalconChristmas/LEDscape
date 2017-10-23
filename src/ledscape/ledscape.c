@@ -218,6 +218,7 @@ ledscape_map_matrix_bits(
     }
     uint8_t bitsToOutput = config->bitsToOutput;
     int interleave = 0;
+    int interleaveCols = 1;
     int row1 = 1;
     int bytesPerRow = LEDSCAPE_MATRIX_OUTPUTS * config->maxPanel * 3 * 2 * config->panel_width;
     int interleaveOffset = 0;
@@ -230,8 +231,15 @@ ledscape_map_matrix_bits(
         interleave = 3;
         interleaveOffset = bytesPerRow * maxRows * interleave;
     }
+    if (config->interleavePixels) {
+        interleaveCols = config->interleavePixels / 8;
+    } else {
+        interleaveCols = 1;
+    }
+    int curInterleaveCol = interleaveCols - 1;
     for (int row = 0; row < maxRows; row++, rowin += bytesPerRow) {
-        for (int bit = 8; bit > (8 - config->bitsToOutput); ) {
+        //for (int bit = 8; bit > (8 - config->bitsToOutput); ) {
+        for (int bit = 8; bit > 0; ) {
             --bit;
             /*
             if (row == 0 && bit == 7) {
@@ -291,13 +299,17 @@ ledscape_map_matrix_bits(
                     inbit = 1 << curbit;
                     if (curbit == 8) {
                         if (interleave) {
-                            if (!row1) {
+                            if (curInterleaveCol) {
+                                curInterleaveCol--;
+                            } else if (!row1) {
                                 row1 = interleave;
+                                curInterleaveCol = interleaveCols - 1;
                                 interleaveOffset = bytesPerRow * maxRows * interleave;
                             } else {
                                 row1--;
+                                curInterleaveCol = interleaveCols - 1;
                                 interleaveOffset -= bytesPerRow * maxRows;
-                                offset -= 6 * 8 * 8;
+                                offset -= 6 * 8 * 8 * interleaveCols;
                             }
                         }
 
@@ -331,9 +343,11 @@ ledscape_map_matrix_bits(
                 
             } while (offset < bytesPerRow);
         }
+        /*
         for (int x = 0; x < (8 - config->bitsToOutput); x++) {
             rowout += 6 * config->maxPanel * LEDSCAPE_MATRIX_OUTPUTS * config->panel_width / 8;
         }
+         */
     }
 }
 
